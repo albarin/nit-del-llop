@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 	"os"
 	"path/filepath"
@@ -12,203 +13,224 @@ import (
 )
 
 func main() {
-	//test()
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 }
 
+func loadImage(filepath string, x int, y int) (Image, error) {
+	image, err := gg.LoadImage(filepath)
+	if err != nil {
+		return Image{}, err
+	}
+
+	return Image{
+		image: image,
+		x:     x,
+		y:     y,
+	}, nil
+}
+
+type Image struct {
+	image image.Image
+	x     int
+	y     int
+}
+
+func (i Image) Image() image.Image {
+	return i.image
+}
+
+func (i Image) Width() int {
+	return i.image.Bounds().Dx()
+}
+
+func (i Image) Height() int {
+	return i.image.Bounds().Dy()
+}
+
+func loadLogos() (Image, error) {
+	logos, err := loadImage("images/logos.png", 0, 0)
+	if err != nil {
+		return Image{}, err
+	}
+
+	logos.image = resize.Resize(
+		uint(logos.Width()/2),
+		uint(logos.Height()/2),
+		logos.image,
+		resize.Lanczos2,
+	)
+
+	return logos, nil
+}
+
+const (
+	width  = 1072
+	height = 701
+	margin = 20.0
+	title  = "La nit del llop"
+)
+
 func run() error {
-	width := 1072
-	height := 701
-	margin := 20
+	ctx := gg.NewContext(width, height)
 
-	dc := gg.NewContext(width, height)
-
-	// load wold
-	background, err := gg.LoadImage("wolf.png")
+	err := drawBackground(ctx)
 	if err != nil {
-		return errors.Wrap(err, "load background image")
+		return err
 	}
 
-	// load logos
-	logos, err := gg.LoadImage("logos.png")
+	pic, err := loadImage("images/foto.png", 0, 0)
 	if err != nil {
-		return errors.Wrap(err, "load logos image")
+		return err
 	}
-
-	// resize logos
-	w := float64(logos.Bounds().Dx()) * 0.5
-	h := float64(logos.Bounds().Dy()) * 0.5
-
-	resizedLogos := resize.Resize(uint(w), uint(h), logos, resize.Lanczos2)
-
-	dc.DrawImage(background, 0, 0)
-	dc.DrawImage(resizedLogos, width-resizedLogos.Bounds().Dx()-margin, height-resizedLogos.Bounds().Dy()-margin)
 
 	// draw image
-	x := float64(margin)
-	y := float64(margin)
-	w = float64(dc.Width()/2) - float64(margin)
-	h = float64(dc.Height()) - float64(2.0*margin)
-	dc.SetColor(color.RGBA{0, 111, 123, 0})
-	dc.DrawRectangle(x, y, w, h)
-	//dc.Fill()
+	x := margin
+	y := margin
+	contentWidth := float64(ctx.Width()/2) - (margin)
+	h := float64(ctx.Height()) - (2.0 * margin)
+	ctx.SetColor(color.RGBA{0, 111, 123, 0})
+	ctx.DrawRectangle(x, y, contentWidth, h)
+	//ctx.Fill()
 
 	// load fonts
 	fontSize := 90.0
-	fontPath := filepath.Join("fonts", "RobotoCondensed-Bold.ttf")
-	if err := dc.LoadFontFace(fontPath, fontSize); err != nil {
-		return errors.Wrap(err, "load font")
+	fontPath := filepath.Join("fonts", "LobsterTwo-Bold.ttf")
+	if err := ctx.LoadFontFace(fontPath, fontSize); err != nil {
+		return err
 	}
 
-	// write text
-	dc.SetColor(color.White)
-	s := "La nit del llop"
-	textWidth, textHeight := dc.MeasureString(s)
-	x = float64(margin)
-	textHeight, _, err = adjustFont(fontSize, textWidth, w, dc, fontPath, textHeight, s, 10)
+	ctx.SetColor(color.White)
+	y += margin
+	_, textHeight := ctx.MeasureString(title)
+	textHeight, _, err = adjustFont(ctx, title, contentWidth, fontSize, fontPath, 10)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	y = textHeight
-	dc.DrawStringAnchored(s, float64(margin)+(w/2), y, 0.5, 0.5)
-	y = float64(margin) + textHeight
+	y += textHeight
+	ctx.DrawStringAnchored(title, margin+contentWidth/2, y, 0.5, 0)
 
-	// load fonts
-	fontPath = filepath.Join("fonts", "RobotoCondensed-Regular.ttf")
-	if err := dc.LoadFontFace(fontPath, 35); err != nil {
+	fontPath = filepath.Join("fonts", "RobotoCondensed-Light.ttf")
+	if err := ctx.LoadFontFace(fontPath, 25); err != nil {
 		return errors.Wrap(err, "load font")
 	}
-	s = "presenta"
-	textWidth, textHeight = dc.MeasureString(s)
-	y += textHeight + 15
-	dc.DrawStringAnchored(s, float64(margin)+(w/2), y, 0.5, 0.5)
+	s := "presenta"
+	_, textHeight = ctx.MeasureString(s)
+	y += margin + textHeight
+	ctx.DrawStringAnchored(s, margin+contentWidth/2, y, 0.5, 0)
+
+	picSpace := 210.0
+	resizedPic := resize.Thumbnail(uint(pic.Width()), uint(picSpace), pic.Image(), resize.Lanczos3)
+	y += margin
+	ctx.DrawImageAnchored(resizedPic, int(margin+contentWidth/2), int(y), 0.5, 0)
 
 	s = `"Antes de los años terribles"`
 	fontPath = filepath.Join("fonts", "RobotoCondensed-Bold.ttf")
-	if err := dc.LoadFontFace(fontPath, 200); err != nil {
-		return errors.Wrap(err, "load font")
+	if err := ctx.LoadFontFace(fontPath, 200); err != nil {
+		return err
 	}
-	textWidth, textHeight = dc.MeasureString(s)
-	textHeight, fontSize, err = adjustFont(200, textWidth, w, dc, fontPath, textHeight, s, 10)
+	//_, textHeight = ctx.MeasureString(s)
+	textHeight, fontSize, err = adjustFont(ctx, s, contentWidth, 200, fontPath, 10)
 	if err != nil {
 		panic(err)
 	}
-	y += textHeight + float64(margin)*12
-	dc.DrawStringAnchored(s, float64(margin)+w/2, y, 0.5, 0.5)
-
-	fontPath = filepath.Join("fonts", "RobotoCondensed-Regular.ttf")
-	if err := dc.LoadFontFace(fontPath, 35); err != nil {
+	fmt.Println("f1", fontSize, s)
+	y += textHeight + picSpace + margin
+	ctx.DrawStringAnchored(s, margin+contentWidth/2, y, 0.5, 0)
+	//
+	fontPath = filepath.Join("fonts", "RobotoCondensed-Light.ttf")
+	if err := ctx.LoadFontFace(fontPath, 25); err != nil {
 		return errors.Wrap(err, "load font")
 	}
 	s = "amb"
-	_, textHeight = dc.MeasureString(s)
-	y += textHeight + float64(margin)
-	dc.DrawStringAnchored(s, float64(margin)+w/2, y, 0.5, 0.5)
+	_, textHeight = ctx.MeasureString(s)
+	y += textHeight + margin
+	ctx.DrawStringAnchored(s, margin+contentWidth/2, y, 0.5, 0)
 
+	s = "Victor del Arbol"
 	fontPath = filepath.Join("fonts", "RobotoCondensed-Bold.ttf")
-	if err := dc.LoadFontFace(fontPath, fontSize); err != nil {
+	if err := ctx.LoadFontFace(fontPath, 200); err != nil {
+		return err
+	}
+	textHeight, fontSize, err = adjustFont(ctx, s, contentWidth, fontSize, fontPath, 10)
+	fmt.Println("f3", fontSize, s)
+	if err != nil {
+		return err
+	}
+	y += textHeight + margin
+	ctx.DrawStringAnchored(s, margin+contentWidth/2, y, 0.5, 0)
+
+	fontPath = filepath.Join("fonts", "RobotoCondensed-Light.ttf")
+	if err := ctx.LoadFontFace(fontPath, fontSize); err != nil {
 		return errors.Wrap(err, "load font")
 	}
-	s = "Victor del Arbol"
-	textWidth, textHeight = dc.MeasureString(s)
-	textHeight, fontSize, err = adjustFont(fontSize, textWidth, w, dc, fontPath, textHeight, s, 10)
-	if err != nil {
-		panic(err)
-	}
-	y += textHeight + float64(margin)
-	dc.DrawStringAnchored(s, float64(margin)+w/2, y, 0.5, 0.5)
-
 	s = "Dijous 19 de març a les 21h"
-	textWidth, textHeight = dc.MeasureString(s)
-	textWidth, textHeight = dc.MeasureString(s)
-	textHeight, fontSize, err = adjustFont(fontSize, textWidth, w, dc, fontPath, textHeight, s, 10)
+	textHeight, fontSize, err = adjustFont(ctx, s, contentWidth, fontSize, fontPath, 10)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	y += textHeight + float64(margin)*2
-	dc.DrawStringAnchored(s, float64(margin)+w/2, y, 0.5, 0.5)
+	y += textHeight + (margin)*1 + 10
+	ctx.DrawStringAnchored(s, float64(margin)+contentWidth/2, y, 0.5, 0)
 
 	s = "a l'Orfeó Catalònia, sopar tertúlia amb l'autor"
-	textWidth, textHeight = dc.MeasureString(s)
-	textWidth, textHeight = dc.MeasureString(s)
-	fmt.Println(fontSize, s)
-	textHeight, fontSize, err = adjustFont(fontSize, textWidth, w, dc, fontPath, textHeight, s, 1)
-	fmt.Println(fontSize, s)
+	fmt.Println("fs", fontSize)
+	textHeight, fontSize, err = adjustFont(ctx, s, contentWidth, fontSize, fontPath, 3)
+	fmt.Println("fs", fontSize)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	y += textHeight + float64(margin)
-	dc.DrawStringAnchored(s, float64(margin)+w/2, y, 0.5, 0.5)
+	y += textHeight + (margin) + 5
+	ctx.DrawStringAnchored(s, (margin)+contentWidth/2, y, 0.5, 0)
 
 	s = "Contactar amb ernesto@projecte-loc.org"
-	textWidth, textHeight = dc.MeasureString(s)
-	y += textHeight + float64(margin)
-	dc.DrawStringAnchored(s, float64(margin)+w/2, y, 0.5, 0.5)
+	_, textHeight = ctx.MeasureString(s)
+	y += textHeight + (margin)
+	ctx.DrawStringAnchored(s, (margin)+contentWidth/2, y, 0.5, 0)
 
-	if err := dc.SavePNG("output.jpg"); err != nil {
+	if err := ctx.SavePNG("output.jpg"); err != nil {
 		return errors.Wrap(err, "save png")
 	}
 
 	return nil
 }
 
-func adjustFont(fontSize float64, textWidth float64, w float64, dc *gg.Context, fontPath string, textHeight float64, s string, jump int) (float64, float64, error) {
-	fmt.Println(textWidth, w)
-	for i := int(fontSize); textWidth > w; i = i - jump {
-		fontSize = float64(i)
-		if err := dc.LoadFontFace(fontPath, fontSize); err != nil {
-			return 0, 0, errors.Wrap(err, "load font")
-		}
-		textWidth, textHeight = dc.MeasureString(s)
+func drawBackground(ctx *gg.Context) error {
+	background, err := loadImage("images/background.png", 0, 0)
+	if err != nil {
+		return err
 	}
-	return textHeight, fontSize, nil
+
+	logos, err := loadLogos()
+	if err != nil {
+		return err
+	}
+
+	ctx.DrawImage(background.image, 0, 0)
+	ctx.DrawImage(logos.Image(), width-logos.Width()-margin, height-logos.Height()-margin)
+
+	return nil
 }
 
-const TEXT = "Call me Ishmael"
+func adjustFont(ctx *gg.Context, text string, maxWidth float64, initialFontSize float64, fontPath string, step float64) (float64, float64, error) {
+	textWidth, textHeight := ctx.MeasureString(text)
+	fmt.Println("---", textWidth, maxWidth)
+	if textWidth <= maxWidth {
+		return textHeight, initialFontSize, nil
+	}
+	fontSize := initialFontSize
+	endPosition := 0.0
+	fmt.Println(text)
+	for fontSize = initialFontSize; textWidth > maxWidth; fontSize = fontSize - step {
+		fmt.Println("ft", fontSize)
+		err := ctx.LoadFontFace(fontPath, fontSize)
+		if err != nil {
+			return 0, 0, err
+		}
 
-func test() {
-	const W = 500
-	const H = 700
-	const P = 16
-	dc := gg.NewContext(W, H)
-	dc.SetRGB(1, 1, 1)
-	dc.Clear()
-	dc.DrawLine(W/2, 0, W/2, H)
-	dc.DrawLine(0, H/2, W, H/2)
-	dc.DrawRectangle(P, P, W-P-P, H-P-P)
-	dc.SetRGBA(0, 0, 1, 0.25)
-	dc.SetLineWidth(3)
-	dc.Stroke()
-	dc.SetRGB(0, 0, 0)
-
-	if err := dc.LoadFontFace("/Library/Fonts/Arial Bold.ttf", 18); err != nil {
-		panic(err)
+		textWidth, endPosition = ctx.MeasureString(text)
 	}
 
-	//x := float64(0)
-	y := float64(P)
-	when := "Dijous 19 de març a les 21h"
-	_, textHeight := dc.MeasureString(when)
-
-	dc.DrawStringAnchored(when, W/2, y, 0.5, 0.5)
-
-	where := "a l'Orfeó Catalònia, sopar tertúlia amb l'autor"
-	_, textHeight = dc.MeasureString(where)
-	y += textHeight + 10
-	dc.DrawStringAnchored(where, W/2, y, 0.5, 0.5)
-
-	contact := "Contactar amb ernesto@projecte-loc.org"
-	_, textHeight = dc.MeasureString(contact)
-	y += textHeight + 10
-	dc.DrawStringAnchored(contact, W/2, y, 0.5, 0.5)
-	//
-	//dc.DrawStringWrapped("UPPER MIDDLE", W/2, P, 0.5, 0, 0, 1.5, gg.AlignCenter)
-	//if err := dc.LoadFontFace("/Library/Fonts/Arial.ttf", 12); err != nil {
-	//	panic(err)
-	//}
-
-	dc.SavePNG("out.png")
+	return endPosition, fontSize + step, nil
 }
