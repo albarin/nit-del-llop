@@ -39,7 +39,7 @@ func paint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cartel := answers.Parse()
+	cartel := poster.Parse(answers)
 
 	err = poster.Run(
 		cartel,
