@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -14,11 +15,26 @@ import (
 
 func main() {
 	router := mux.NewRouter()
-	router.HandleFunc("/paint", paint).Methods(http.MethodPost)
+	router.HandleFunc("/generate", paint).Methods(http.MethodPost)
+	router.HandleFunc("/download", download).Methods(http.MethodGet)
 
 	server := &http.Server{Handler: router, Addr: ":" + os.Getenv("PORT")}
 	if err := server.ListenAndServe(); err != nil {
 		panic(err)
+	}
+}
+
+func download(w http.ResponseWriter, r *http.Request) {
+	poster, err := os.Open("cartel.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer poster.Close()
+
+	w.Header().Set("Content-Type", "image/png")
+	_, err = io.Copy(w, poster)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
