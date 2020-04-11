@@ -2,6 +2,9 @@ package webhooks
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -9,11 +12,12 @@ import (
 )
 
 type Poster struct {
-	Title string
-	Guest string
-	Date  time.Time
-	Time  string
-	Type  string
+	Title  string
+	Guest  string
+	Date   time.Time
+	Time   string
+	PicURL string
+	Type   string
 }
 
 func (p Poster) When() string {
@@ -49,6 +53,35 @@ func (p Poster) Where() string {
 	return fmt.Sprintf("a l'Orfeó Catalònia, %s", types[p.Type])
 }
 
+func (p Poster) Picture() (string, error) {
+	filepath := "pic.png"
+
+	err := downloadFile(filepath, p.PicURL)
+	if err != nil {
+		return "", err
+	}
+
+	return filepath, nil
+}
+
+func downloadFile(filepath string, url string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+
+	return err
+}
+
 func (w Webhook) Parse() Poster {
 	poster := Poster{}
 
@@ -65,6 +98,8 @@ func (w Webhook) Parse() Poster {
 			poster.Time = answer.Text
 		case "type":
 			poster.Type = answer.Choice.Label
+		case "pic":
+			poster.PicURL = answer.PicURL
 		}
 	}
 
@@ -85,6 +120,7 @@ type Answers struct {
 	Text   string  `json:"text"`
 	Date   string  `json:"date"`
 	Choice Choice  `json:"choice"`
+	PicURL string  `json:"file_url"`
 	Field  Field   `json:"field"`
 }
 

@@ -29,6 +29,7 @@ func paint(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 		return
 	}
+	defer r.Body.Close()
 
 	var answers webhooks.Webhook
 	err = json.Unmarshal(body, &answers)

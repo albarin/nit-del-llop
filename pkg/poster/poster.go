@@ -3,6 +3,7 @@ package poster
 import (
 	"fmt"
 	"image/color"
+	"os"
 
 	"github.com/albarin/poster/pkg/webhooks"
 
@@ -32,7 +33,13 @@ func Run(poster webhooks.Poster, background, logos, pic string) error {
 		return err
 	}
 
-	err = drawPic(ctx, pic)
+	filepath, err := poster.Picture()
+	err = drawPic(ctx, filepath)
+	if err != nil {
+		return err
+	}
+
+	err = os.Remove(filepath)
 	if err != nil {
 		return err
 	}
@@ -111,7 +118,7 @@ func drawText(ctx *gg.Context, poster webhooks.Poster) error {
 		},
 	}
 
-	contentWidth := float64(ctx.Width()/2 - margin*2)
+	contentWidth := float64(ctx.Width()/2 - margin)
 	positionX := margin + contentWidth/2
 	positionY := margin
 
@@ -152,8 +159,8 @@ func drawPic(ctx *gg.Context, file string) error {
 		resize.Lanczos3,
 	)
 
-	contentWidth := ctx.Width()/2 + margin
-	ctx.DrawImageAnchored(resizedPic, margin+contentWidth/2, 165, 0.5, 0)
+	contentWidth := ctx.Width()/2 - margin
+	ctx.DrawImageAnchored(resizedPic, margin+contentWidth/2, 170, 0.5, 0)
 
 	return nil
 }
