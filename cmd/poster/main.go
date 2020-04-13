@@ -20,21 +20,22 @@ func main() {
 
 	server := &http.Server{Handler: router, Addr: ":" + os.Getenv("PORT")}
 	if err := server.ListenAndServe(); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
 
 func download(w http.ResponseWriter, r *http.Request) {
 	poster, err := os.Open("cartel.png")
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		w.WriteHeader(http.StatusNotFound)
 	}
 	defer poster.Close()
 
 	w.Header().Set("Content-Type", "image/png")
 	_, err = io.Copy(w, poster)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
 
