@@ -1,4 +1,4 @@
-package webhooks
+package poster
 
 type Webhook struct {
 	FormResponse FormResponse `json:"form_response"`

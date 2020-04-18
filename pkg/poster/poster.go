@@ -8,9 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/albarin/poster/pkg/webhooks"
-
 	"github.com/goodsign/monday"
+)
+
+const (
+	dinnerKey         = "Cena"
+	dinnerValue       = "sopar tertúlia amb l'autor"
+	storytellingKey   = "Cuentos"
+	storytellingValue = "copa de vi i montaditos"
 )
 
 type Poster struct {
@@ -22,7 +27,7 @@ type Poster struct {
 	Type   string
 }
 
-func Parse(w webhooks.Webhook) Poster {
+func (w Webhook) Parse() Poster {
 	poster := Poster{}
 
 	for _, answer := range w.FormResponse.Answers {
@@ -54,6 +59,26 @@ func (p Poster) When() string {
 	return fmt.Sprintf("%s %s %s a les %s", dayName, dayNumber, monthName, p.Time)
 }
 
+func (p Poster) Where() string {
+	types := map[string]string{
+		dinnerKey:       dinnerValue,
+		storytellingKey: storytellingValue,
+	}
+
+	return fmt.Sprintf("a l'Orfeó Catalònia, %s", types[p.Type])
+}
+
+func (p Poster) Picture() (string, error) {
+	filepath := "tmp.png"
+
+	err := downloadFile(filepath, p.PicURL)
+	if err != nil {
+		return "", err
+	}
+
+	return filepath, nil
+}
+
 func formatMonth(month string) string {
 	if isVowel(month[:1]) {
 		return fmt.Sprintf("d'%s", month)
@@ -68,26 +93,6 @@ func isVowel(char string) bool {
 	}
 
 	return false
-}
-
-func (p Poster) Where() string {
-	types := map[string]string{
-		"Cena":    "sopar tertúlia amb l'autor",
-		"Cuentos": "copa de vi i montaditos",
-	}
-
-	return fmt.Sprintf("a l'Orfeó Catalònia, %s", types[p.Type])
-}
-
-func (p Poster) Picture() (string, error) {
-	filepath := "pic.png"
-
-	err := downloadFile(filepath, p.PicURL)
-	if err != nil {
-		return "", err
-	}
-
-	return filepath, nil
 }
 
 func downloadFile(filepath string, url string) error {

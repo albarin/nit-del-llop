@@ -12,8 +12,12 @@ import (
 	"os"
 
 	"github.com/albarin/poster/pkg/poster"
-	"github.com/albarin/poster/pkg/webhooks"
 	"github.com/gorilla/mux"
+)
+
+const (
+	port        = "PORT"
+	secretToken = "SECRET_TOKEN"
 )
 
 func main() {
@@ -21,7 +25,7 @@ func main() {
 	router.HandleFunc("/generate", generate).Methods(http.MethodPost)
 	router.HandleFunc("/download", download).Methods(http.MethodGet)
 
-	server := &http.Server{Handler: router, Addr: ":" + os.Getenv("PORT")}
+	server := &http.Server{Handler: router, Addr: ":" + os.Getenv(port)}
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
@@ -71,14 +75,14 @@ func generate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	ok, err := verifySignature(body, os.Getenv("SECRET_TOKEN"), r.Header.Get("Typeform-Signature"))
+	ok, err := verifySignature(body, os.Getenv(secretToken), r.Header.Get("Typeform-Signature"))
 	if err != nil || !ok {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err, ok)
 		return
 	}
 
-	var answers webhooks.Webhook
+	var answers poster.Webhook
 	err = json.Unmarshal(body, &answers)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -86,10 +90,10 @@ func generate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cartel := poster.Parse(answers)
+	p := answers.Parse()
 
 	err = poster.Run(
-		cartel,
+		p,
 		"assets/images/background.png",
 		"assets/images/logos.png",
 		"assets/images/foto.png",
