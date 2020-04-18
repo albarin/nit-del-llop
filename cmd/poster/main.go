@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -15,7 +18,7 @@ import (
 
 func main() {
 	router := mux.NewRouter()
-	router.HandleFunc("/generate", paint).Methods(http.MethodPost)
+	router.HandleFunc("/generate", generate).Methods(http.MethodPost)
 	router.HandleFunc("/download", download).Methods(http.MethodGet)
 
 	server := &http.Server{Handler: router, Addr: ":" + os.Getenv("PORT")}
@@ -39,20 +42,47 @@ func download(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func paint(w http.ResponseWriter, r *http.Request) {
+func computeSignature(payload []byte, secret string) (string, error) {
+	h := hmac.New(sha256.New, []byte(secret))
+
+	_, err := h.Write(payload)
+	if err != nil {
+		return "", err
+	}
+
+	return "sha256=" + base64.StdEncoding.EncodeToString(h.Sum(nil)), nil
+}
+
+func verifySignature(payload []byte, secret, receivedSignature string) (bool, error) {
+	signature, err := computeSignature(payload, secret)
+	if err != nil {
+		return false, err
+	}
+
+	return signature == receivedSignature, nil
+}
+
+func generate(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 	defer r.Body.Close()
+
+	ok, err := verifySignature(body, os.Getenv("SECRET_TOKEN"), r.Header.Get("Typeform-Signature"))
+	if err != nil || !ok {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err, ok)
+		return
+	}
 
 	var answers webhooks.Webhook
 	err = json.Unmarshal(body, &answers)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 
@@ -67,7 +97,7 @@ func paint(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 
