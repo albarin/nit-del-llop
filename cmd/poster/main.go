@@ -58,6 +58,10 @@ func computeSignature(payload []byte, secret string) (string, error) {
 }
 
 func verifySignature(payload []byte, secret, receivedSignature string) (bool, error) {
+	if secret == "" {
+		return true, nil
+	}
+
 	signature, err := computeSignature(payload, secret)
 	if err != nil {
 		return false, err
@@ -92,12 +96,7 @@ func generate(w http.ResponseWriter, r *http.Request) {
 
 	p := answers.Parse()
 
-	err = poster.Run(
-		p,
-		"assets/images/background.png",
-		"assets/images/logos.png",
-		"assets/images/foto.png",
-	)
+	err = poster.Run(p, "assets/images/background.png", "assets/images/logos.png")
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

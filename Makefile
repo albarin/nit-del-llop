@@ -7,7 +7,6 @@ build:
 
 run: build
 	PORT=3000 \
-	SECRET_TOKEN=ploc \
  	./bin/poster
 
 deploy:

@@ -10,15 +10,15 @@ import (
 )
 
 const (
-	width          = 1072
-	height         = 701
-	margin         = 20.0
+	width          = 1280
+	height         = 800
+	margin         = 30.0
 	LobsterTwoBold = "assets/fonts/LobsterTwo-Bold.ttf"
 	RobotoLight    = "assets/fonts/RobotoCondensed-Light.ttf"
 	RobotoBold     = "assets/fonts/RobotoCondensed-Bold.ttf"
 )
 
-func Run(poster Poster, background, logos, pic string) error {
+func Run(poster Poster, background, logos string) error {
 	ctx := gg.NewContext(width, height)
 
 	err := drawBackground(ctx, background)
@@ -68,50 +68,50 @@ func drawText(ctx *gg.Context, poster Poster) error {
 	lines := []Line{
 		{
 			text:      "La nit del llop",
-			marginTop: margin,
+			marginTop: 25,
 			fontSize:  90.0,
 			fontPath:  LobsterTwoBold,
 		},
 		{
 			text:      "presenta",
-			marginTop: margin,
+			marginTop: 25,
 			fontSize:  25,
 			fontPath:  RobotoLight,
 		},
 		{
 			text:      fmt.Sprintf(`"%s"`, poster.Title),
-			marginTop: 250,
+			marginTop: 290,
 			fontSize:  45,
 			fontPath:  RobotoBold,
 		},
 		{
 			text:      "amb",
-			marginTop: 15,
+			marginTop: 20,
 			fontSize:  25,
 			fontPath:  RobotoLight,
 		},
 		{
 			text:      fmt.Sprintf("%s", poster.Guest),
-			marginTop: 15,
+			marginTop: 20,
 			fontSize:  45,
 			fontPath:  RobotoBold,
 		},
 		{
 			text:      poster.When(),
-			marginTop: margin + 10,
-			fontSize:  35,
+			marginTop: 40,
+			fontSize:  45,
 			fontPath:  RobotoLight,
 		},
 		{
 			text:      poster.Where(),
-			marginTop: margin,
-			fontSize:  35,
+			marginTop: 20,
+			fontSize:  45,
 			fontPath:  RobotoLight,
 		},
 		{
 			text:      "Contactar amb ernesto@projecte-loc.org",
-			marginTop: margin,
-			fontSize:  35,
+			marginTop: 20,
+			fontSize:  45,
 			fontPath:  RobotoLight,
 		},
 	}
@@ -152,13 +152,13 @@ func drawPic(ctx *gg.Context, file string) error {
 
 	resizedPic := resize.Thumbnail(
 		uint(pic.Bounds().Dx()),
-		210,
+		250,
 		pic,
 		resize.Lanczos3,
 	)
 
 	contentWidth := ctx.Width()/2 - margin
-	ctx.DrawImageAnchored(resizedPic, margin+contentWidth/2, 170, 0.5, 0)
+	ctx.DrawImageAnchored(resizedPic, margin+contentWidth/2, 185, 0.5, 0)
 
 	return nil
 }
@@ -181,7 +181,7 @@ func drawLogos(ctx *gg.Context, file string) error {
 	}
 
 	logos = resize.Thumbnail(
-		uint(logos.Bounds().Dx()/2),
+		uint(float64(logos.Bounds().Dx())*0.8),
 		uint(logos.Bounds().Dx()),
 		logos,
 		resize.Lanczos3,
