@@ -18,26 +18,20 @@ const (
 	RobotoBold     = "assets/fonts/RobotoCondensed-Bold.ttf"
 )
 
-func Run(poster Poster, background, logos string) error {
+func Draw(poster Poster) error {
 	ctx := gg.NewContext(width, height)
 
-	err := drawBackground(ctx, background)
+	err := drawBackground(ctx, "assets/images/background.png")
 	if err != nil {
 		return err
 	}
 
-	err = drawLogos(ctx, logos)
+	err = drawLogos(ctx, "assets/images/logos.png")
 	if err != nil {
 		return err
 	}
 
-	filepath, err := poster.Picture()
-	err = drawPic(ctx, filepath)
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(filepath)
+	err = drawPicture(ctx, poster)
 	if err != nil {
 		return err
 	}
@@ -60,6 +54,68 @@ type Line struct {
 	marginTop float64
 	fontSize  float64
 	fontPath  string
+}
+
+func drawBackground(ctx *gg.Context, file string) error {
+	background, err := gg.LoadImage(file)
+	if err != nil {
+		return err
+	}
+
+	ctx.DrawImage(background, 0, 0)
+
+	return nil
+}
+
+func drawLogos(ctx *gg.Context, file string) error {
+	logos, err := gg.LoadImage(file)
+	if err != nil {
+		return err
+	}
+
+	logos = resize.Thumbnail(
+		uint(float64(logos.Bounds().Dx())*0.8),
+		uint(logos.Bounds().Dx()),
+		logos,
+		resize.Lanczos3,
+	)
+
+	ctx.DrawImage(
+		logos,
+		width-logos.Bounds().Dx()-margin,
+		height-logos.Bounds().Dy()-margin,
+	)
+
+	return nil
+}
+
+func drawPicture(ctx *gg.Context, poster Poster) error {
+	filepath, err := poster.Picture()
+	if err != nil {
+		return err
+	}
+
+	pic, err := gg.LoadImage(filepath)
+	if err != nil {
+		return err
+	}
+
+	resizedPic := resize.Thumbnail(
+		uint(pic.Bounds().Dx()),
+		250,
+		pic,
+		resize.Lanczos3,
+	)
+
+	contentWidth := ctx.Width()/2 - margin
+	ctx.DrawImageAnchored(resizedPic, margin+contentWidth/2, 185, 0.5, 0)
+
+	err = os.Remove(filepath)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func drawText(ctx *gg.Context, poster Poster) error {
@@ -86,7 +142,7 @@ func drawText(ctx *gg.Context, poster Poster) error {
 		},
 		{
 			text:      "amb",
-			marginTop: 20,
+			marginTop: 25,
 			fontSize:  25,
 			fontPath:  RobotoLight,
 		},
@@ -98,7 +154,7 @@ func drawText(ctx *gg.Context, poster Poster) error {
 		},
 		{
 			text:      poster.When(),
-			marginTop: 40,
+			marginTop: 35,
 			fontSize:  45,
 			fontPath:  RobotoLight,
 		},
@@ -142,58 +198,6 @@ func calculatePositionY(ctx *gg.Context, line Line, lastPosition float64) float6
 	_, textHeight := ctx.MeasureString(line.text)
 
 	return lastPosition + line.marginTop + textHeight
-}
-
-func drawPic(ctx *gg.Context, file string) error {
-	pic, err := gg.LoadImage(file)
-	if err != nil {
-		return err
-	}
-
-	resizedPic := resize.Thumbnail(
-		uint(pic.Bounds().Dx()),
-		250,
-		pic,
-		resize.Lanczos3,
-	)
-
-	contentWidth := ctx.Width()/2 - margin
-	ctx.DrawImageAnchored(resizedPic, margin+contentWidth/2, 185, 0.5, 0)
-
-	return nil
-}
-
-func drawBackground(ctx *gg.Context, file string) error {
-	background, err := gg.LoadImage(file)
-	if err != nil {
-		return err
-	}
-
-	ctx.DrawImage(background, 0, 0)
-
-	return nil
-}
-
-func drawLogos(ctx *gg.Context, file string) error {
-	logos, err := gg.LoadImage(file)
-	if err != nil {
-		return err
-	}
-
-	logos = resize.Thumbnail(
-		uint(float64(logos.Bounds().Dx())*0.8),
-		uint(logos.Bounds().Dx()),
-		logos,
-		resize.Lanczos3,
-	)
-
-	ctx.DrawImage(
-		logos,
-		width-logos.Bounds().Dx()-margin,
-		height-logos.Bounds().Dy()-margin,
-	)
-
-	return nil
 }
 
 func adjustFontSize(ctx *gg.Context, line Line, maxWidth float64) error {
