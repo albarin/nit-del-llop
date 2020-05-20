@@ -58,7 +58,9 @@ func generate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = poster.Draw(wh.Parse())
+	p := wh.ToPoster()
+
+	err = p.Render()
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("could not generate poster")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -67,7 +69,7 @@ func generate(w http.ResponseWriter, r *http.Request) {
 }
 
 func download(w http.ResponseWriter, r *http.Request) {
-	image, err := os.Open("cartel.png")
+	image, err := os.Open("poster.png")
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("could not open image")
 		w.WriteHeader(http.StatusInternalServerError)

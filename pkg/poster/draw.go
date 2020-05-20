@@ -18,7 +18,7 @@ const (
 	RobotoBold     = "assets/fonts/RobotoCondensed-Bold.ttf"
 )
 
-func Draw(poster Poster) error {
+func (p Poster) Render() error {
 	ctx := gg.NewContext(width, height)
 
 	err := drawBackground(ctx, "assets/images/background.png")
@@ -31,17 +31,17 @@ func Draw(poster Poster) error {
 		return err
 	}
 
-	err = drawPicture(ctx, poster)
+	err = drawPicture(ctx, p)
 	if err != nil {
 		return err
 	}
 
-	err = drawText(ctx, poster)
+	err = drawText(ctx, p)
 	if err != nil {
 		return err
 	}
 
-	err = ctx.SavePNG("cartel.png")
+	err = ctx.SavePNG("poster.png")
 	if err != nil {
 		return err
 	}

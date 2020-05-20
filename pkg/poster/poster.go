@@ -27,7 +27,7 @@ type Poster struct {
 	Type   string
 }
 
-func (w Webhook) Parse() Poster {
+func (w Webhook) ToPoster() Poster {
 	poster := Poster{}
 
 	for _, answer := range w.FormResponse.Answers {
